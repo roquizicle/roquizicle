@@ -10,6 +10,7 @@ const ASSETS = [
   '/js/audio.js',
   '/js/questions.js',
   '/js/fallback-questions.js',
+  '/js/sol-standards.js',
   '/js/game.js',
   '/js/ui.js',
   '/js/app.js',
