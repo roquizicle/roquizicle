@@ -60,7 +60,7 @@ const UI = {
   },
 
   // ── Home Screen ──
-  renderHome({ profile, gs, level, nextLvl, pct, unlockedTier, acc, roundSize, loading, error, loadProgress, muted, onCatClick, onSizeClick, onNav, onSettings, onTheme, onMute }) {
+  renderHome({ profile, gs, level, nextLvl, pct, unlockedTier, acc, roundSize, loading, error, loadProgress, muted, mode, onCatClick, onSizeClick, onNav, onSettings, onTheme, onMute, onModeToggle }) {
     this.clear();
     const page = this.el('div');
 
@@ -74,6 +74,9 @@ const UI = {
     logoRow.appendChild(logoText);
 
     const actions = this.el('div', { class: 'header-actions' });
+    const modeBtn = this.el('button', { class: 'theme-toggle', onClick: onModeToggle, text: '📚' });
+    modeBtn.title = 'Switch to School Mode';
+    actions.appendChild(modeBtn);
     actions.appendChild(this.el('button', { class: 'theme-toggle', onClick: onTheme, text: '🎨' }));
     actions.appendChild(this.el('button', { class: 'mute-btn', onClick: onMute, text: muted ? '🔇' : '🔊' }));
     logoRow.appendChild(actions);

@@ -22,6 +22,11 @@ const App = {
   loadProgress: '',
   storeFilter: 'all',
   redeemMsg: null,
+  // Mode: 'fun' or 'school'
+  mode: 'fun',
+  // SOL state
+  solSubject: null,
+  solStrand: null,
 
   // ── Init ──
   async init() {
@@ -37,6 +42,9 @@ const App = {
 
     // Init audio (will wait for user interaction)
     Audio._muted = Storage.getMuted();
+
+    // Load mode preference
+    this.mode = Storage.get('mode') || 'fun';
 
     // Decide first screen
     setTimeout(() => {
@@ -75,6 +83,10 @@ const App = {
         break;
 
       case 'home':
+        if (this.mode === 'school') {
+          this._renderSOLHome();
+          break;
+        }
         UI.renderHome({
           profile: this.profile,
           gs: this.gs,
@@ -84,12 +96,14 @@ const App = {
           error: this.error,
           loadProgress: this.loadProgress,
           muted: Audio.isMuted(),
+          mode: this.mode,
           onCatClick: (key) => this.startQuiz(key),
           onSizeClick: (n) => { this.roundSize = n; this.render(); },
           onNav: (v) => this.navigate(v),
           onSettings: () => this.navigate('settings'),
           onTheme: () => this.showThemePicker(),
           onMute: () => { Audio.init(); Audio.toggleMute(); this.render(); },
+          onModeToggle: () => this.toggleMode(),
         });
         break;
 
@@ -152,7 +166,68 @@ const App = {
       case 'settings':
         this._renderSettings();
         break;
+
+      case 'sol':
+        this._renderSOLHome();
+        break;
+
+      case 'sol-strand':
+        this._renderSOLStrand();
+        break;
     }
+  },
+
+  // ── Mode Toggle ──
+  toggleMode() {
+    this.mode = this.mode === 'fun' ? 'school' : 'fun';
+    Storage.set('mode', this.mode);
+    this.view = 'home';
+    this.render();
+  },
+
+  // ── Start SOL Quiz ──
+  async startSOLQuiz(subject, strand) {
+    await Audio.init();
+    Audio.tap();
+
+    this.loading = true;
+    this.error = null;
+    this.solSubject = subject;
+    this.solStrand = strand;
+    this.cat = `${subject}: ${strand || 'All Standards'}`;
+    this.qi = 0;
+    this.score = 0;
+    this.flipped = null;
+    this.rStreak = 0;
+    this.newBadges = [];
+    this.qStart = Date.now();
+    this.render();
+
+    let qs;
+    if (strand) {
+      qs = await SOLEngine.generateStrandQuiz(subject, this.profile.grade, strand, this.roundSize, (prog) => {
+        this.loadProgress = prog;
+        this.render();
+      });
+    } else {
+      qs = await SOLEngine.generateQuiz(subject, this.profile.grade, this.roundSize, (prog) => {
+        this.loadProgress = prog;
+        this.render();
+      });
+    }
+
+    this.loading = false;
+    this.loadProgress = '';
+
+    if (qs.length > 0) {
+      this.questions = qs;
+      this.view = 'quiz';
+      Audio.startBgMusic();
+    } else {
+      this.error = "Couldn't generate SOL questions. Please try again!";
+      this.view = this.solStrand ? 'sol-strand' : 'sol';
+    }
+    this.render();
   },
 
   // ── Start Quiz ──
@@ -404,7 +479,203 @@ const App = {
     this.render();
   },
 
-  // ── Settings ──
+  // ── SOL Home (School Mode) ──
+  _renderSOLHome() {
+    UI.clear();
+    const app = document.getElementById('app');
+    const page = UI.el('div');
+
+    // Header with mode toggle
+    const header = UI.el('div', { class: 'header' });
+    const logoRow = UI.el('div', { class: 'logo-row' });
+    logoRow.appendChild(UI.el('span', { class: 'logo-icon', text: '📚' }));
+    const logoText = UI.el('div');
+    logoText.appendChild(UI.el('div', { class: 'logo-name', text: 'roquiz' }));
+    logoText.appendChild(UI.el('div', { class: 'logo-tag', text: 'school mode · virginia sol' }));
+    logoRow.appendChild(logoText);
+
+    const actions = UI.el('div', { class: 'header-actions' });
+    // Mode toggle button
+    const modeBtn = UI.el('button', { class: 'theme-toggle', onClick: () => this.toggleMode(), text: '🎮' });
+    modeBtn.title = 'Switch to Fun Mode';
+    actions.appendChild(modeBtn);
+    actions.appendChild(UI.el('button', { class: 'theme-toggle', onClick: () => this.showThemePicker(), text: '🎨' }));
+    actions.appendChild(UI.el('button', { class: 'mute-btn', onClick: () => { Audio.init(); Audio.toggleMute(); this.render(); }, text: Audio.isMuted() ? '🔇' : '🔊' }));
+    logoRow.appendChild(actions);
+    header.appendChild(logoRow);
+
+    // Profile chip
+    const chip = UI.el('div', { class: 'profile-chip', onClick: () => this.navigate('settings') });
+    chip.appendChild(UI.el('span', { text: '👤' }));
+    chip.appendChild(UI.el('span', { class: 'profile-name', text: this.profile.name }));
+    chip.appendChild(UI.el('span', { class: 'profile-meta', text: `${this.profile.grade} · LCPS / Virginia SOL` }));
+    header.appendChild(chip);
+
+    // XP card
+    const level = GameLogic.getLevel(this.gs.xp);
+    const nextLvl = GameLogic.getNextLevel(this.gs.xp);
+    const pct = GameLogic.getLevelProgress(this.gs.xp);
+    const xpCard = UI.el('div', { class: 'xp-card' });
+    const xpRow = UI.el('div', { class: 'xp-row' });
+    xpRow.appendChild(UI.el('span', { class: 'xp-level', text: level.name }));
+    xpRow.appendChild(UI.el('span', { class: 'xp-amount', text: Math.floor(this.gs.xp) + ' XP' }));
+    xpCard.appendChild(xpRow);
+    const track = UI.el('div', { class: 'xp-track' });
+    track.appendChild(UI.el('div', { class: 'xp-fill', style: { width: pct + '%' } }));
+    xpCard.appendChild(track);
+    if (nextLvl) xpCard.appendChild(UI.el('div', { class: 'xp-hint', text: Math.ceil(nextLvl.xp - this.gs.xp) + ' XP to ' + nextLvl.name }));
+    header.appendChild(xpCard);
+    page.appendChild(header);
+
+    // Error/Loading
+    if (this.error) page.appendChild(UI.el('div', { class: 'error-banner', text: this.error }));
+    if (this.loading) page.appendChild(UI.el('div', { class: 'loading-banner', text: (this.loadProgress || 'Generating SOL questions...') + ' ✨' }));
+
+    // Mode indicator
+    const modeBar = UI.el('div', { style: { margin: '8px 16px', padding: '10px 14px', background: 'var(--accent)15', border: '2px solid var(--accent)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } });
+    modeBar.appendChild(UI.el('span', { style: { fontWeight: 700, fontSize: '14px', color: 'var(--accent)' }, text: '📚 School Mode — Virginia SOL Aligned' }));
+    modeBar.appendChild(UI.el('button', { style: { background: 'var(--btn-primary)', border: 'none', borderRadius: '8px', padding: '4px 10px', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-body)' }, text: '🎮 Fun Mode', onClick: () => this.toggleMode() }));
+    page.appendChild(modeBar);
+
+    // Round size picker
+    const sizeSection = UI.el('div', { class: 'section' });
+    sizeSection.appendChild(UI.el('div', { class: 'section-title', text: 'Questions per quiz' }));
+    const sizePicker = UI.el('div', { class: 'size-picker' });
+    [5, 10, 15, 25].forEach(n => {
+      sizePicker.appendChild(UI.el('button', {
+        class: 'size-btn' + (this.roundSize === n ? ' active' : ''),
+        text: String(n),
+        onClick: () => { this.roundSize = n; this.render(); },
+      }));
+    });
+    sizeSection.appendChild(sizePicker);
+    page.appendChild(sizeSection);
+
+    // Subject cards
+    const subjects = SOLEngine.getSubjects();
+    const subjectIcons = { Math: '🧮', Science: '🔬', English: '📖', History: '🏛️' };
+    const subjectColors = { Math: '#8E24AA', Science: '#2196F3', English: '#4CAF50', History: '#FF9800' };
+    const subjectDescs = {
+      Math: '2023 Standards of Learning — Number Sense, Computation, Measurement, Data, Algebra',
+      Science: '2018 Standards of Learning — Investigation, Matter, Life, Earth, Space',
+      English: '2024 Standards of Learning — Reading, Writing, Vocabulary, Comprehension',
+      History: '2023 Standards of Learning — Civics, Geography, Economics, US & Virginia History',
+    };
+
+    const subSection = UI.el('div', { class: 'section' });
+    subSection.appendChild(UI.el('div', { class: 'section-title', text: `Choose a Subject (${this.profile.grade})` }));
+
+    subjects.forEach(sub => {
+      const standards = SOLEngine.getStandards(sub, this.profile.grade);
+      const strands = SOLEngine.getStrands(sub, this.profile.grade);
+
+      const card = UI.el('div', {
+        style: {
+          background: 'var(--bg-card)', border: `3px solid ${subjectColors[sub]}44`,
+          borderRadius: '16px', padding: '16px', marginBottom: '12px', cursor: 'pointer',
+          transition: 'transform 0.15s',
+        },
+        onClick: () => {
+          this.solSubject = sub;
+          this.view = 'sol-strand';
+          this.render();
+        },
+      });
+
+      const topRow = UI.el('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' } });
+      topRow.appendChild(UI.el('span', { style: { fontSize: '36px' }, text: subjectIcons[sub] }));
+      const info = UI.el('div');
+      info.appendChild(UI.el('div', { style: { fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700, color: subjectColors[sub] }, text: sub }));
+      info.appendChild(UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)' }, text: `${standards.length} standards · ${strands.length} strands` }));
+      topRow.appendChild(info);
+      topRow.appendChild(UI.el('span', { style: { marginLeft: 'auto', fontSize: '20px', color: 'var(--text-secondary)' }, text: '›' }));
+      card.appendChild(topRow);
+
+      card.appendChild(UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }, text: subjectDescs[sub] }));
+      subSection.appendChild(card);
+    });
+
+    page.appendChild(subSection);
+    page.appendChild(UI.renderNav('home', (v) => this.navigate(v)));
+    app.appendChild(page);
+  },
+
+  // ── SOL Strand Selection ──
+  _renderSOLStrand() {
+    UI.clear();
+    const app = document.getElementById('app');
+    const page = UI.el('div');
+    const sub = this.solSubject;
+    const subjectColors = { Math: '#8E24AA', Science: '#2196F3', English: '#4CAF50', History: '#FF9800' };
+    const subjectIcons = { Math: '🧮', Science: '🔬', English: '📖', History: '🏛️' };
+
+    const bar = UI.el('div', { class: 'page-bar' });
+    bar.appendChild(UI.el('button', { class: 'back-btn', text: '‹', onClick: () => { this.view = 'home'; this.render(); } }));
+    bar.appendChild(UI.el('div', { class: 'page-title', text: subjectIcons[sub] + ' ' + sub }));
+    page.appendChild(bar);
+
+    // Error/Loading
+    if (this.error) page.appendChild(UI.el('div', { class: 'error-banner', text: this.error }));
+    if (this.loading) page.appendChild(UI.el('div', { class: 'loading-banner', text: (this.loadProgress || 'Generating questions...') + ' ✨' }));
+
+    // Grade label
+    page.appendChild(UI.el('div', { style: { padding: '12px 16px 4px', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }, text: `${this.profile.grade} · Virginia SOL ${sub === 'Math' ? '2023' : sub === 'English' ? '2024' : sub === 'History' ? '2023' : '2018'}` }));
+
+    // All Standards button
+    const allBtn = UI.el('button', {
+      style: {
+        margin: '8px 16px', width: 'calc(100% - 32px)', padding: '14px 16px',
+        background: subjectColors[sub] + '22', border: `3px solid ${subjectColors[sub]}`,
+        borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
+        fontFamily: 'var(--font-body)', color: 'var(--text)', fontSize: '15px', fontWeight: 700,
+      },
+      onClick: () => { if (!this.loading) this.startSOLQuiz(sub, null); },
+    });
+    allBtn.appendChild(UI.el('span', { style: { fontSize: '24px' }, text: '📝' }));
+    allBtn.appendChild(UI.el('div', { style: { textAlign: 'left' } }, [
+      UI.el('div', { text: `All ${sub} Standards`, style: { color: subjectColors[sub] } }),
+      UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }, text: `${this.roundSize} mixed questions across all strands` }),
+    ]));
+    page.appendChild(allBtn);
+
+    // Individual strands
+    const strands = SOLEngine.getStrands(sub, this.profile.grade);
+    const strandSection = UI.el('div', { class: 'section' });
+    strandSection.appendChild(UI.el('div', { class: 'section-title', text: 'Or pick a strand:' }));
+
+    strands.forEach(strand => {
+      const standards = SOLEngine.getStandards(sub, this.profile.grade).filter(s => s.strand === strand);
+
+      const card = UI.el('button', {
+        style: {
+          width: '100%', background: 'var(--bg-card)', border: '2px solid var(--border-light)',
+          borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', cursor: 'pointer',
+          display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left',
+          fontFamily: 'var(--font-body)', color: 'var(--text)', transition: 'transform 0.15s',
+        },
+        onClick: () => { if (!this.loading) this.startSOLQuiz(sub, strand); },
+      });
+
+      const topRow = UI.el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } });
+      topRow.appendChild(UI.el('span', { style: { fontWeight: 700, fontSize: '15px', color: subjectColors[sub] }, text: strand }));
+      topRow.appendChild(UI.el('span', { style: { fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }, text: `${standards.length} standards` }));
+      card.appendChild(topRow);
+
+      // List standards
+      standards.forEach(std => {
+        const row = UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', gap: '8px', lineHeight: '1.3' } });
+        row.appendChild(UI.el('span', { style: { fontWeight: 700, color: subjectColors[sub] + 'BB', minWidth: '55px' }, text: std.code }));
+        row.appendChild(UI.el('span', { text: std.title }));
+        card.appendChild(row);
+      });
+
+      strandSection.appendChild(card);
+    });
+
+    page.appendChild(strandSection);
+    page.appendChild(UI.renderNav('home', (v) => this.navigate(v)));
+    app.appendChild(page);
+  },
   _renderSettings() {
     UI.clear();
     const app = document.getElementById('app');
@@ -445,6 +716,11 @@ const App = {
     card.appendChild(UI.el('div', { class: 'ob-label mt-16', text: '🎨 Theme' }));
     const themeDef = ThemeEngine.getThemeDef();
     card.appendChild(UI.el('button', { class: 'btn-secondary w-full', text: themeDef.icon + ' ' + themeDef.name + ' — Change', onClick: () => this.showThemePicker() }));
+
+    // Mode
+    card.appendChild(UI.el('div', { class: 'ob-label mt-16', text: '🎮 App Mode' }));
+    card.appendChild(UI.el('div', { style: { fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }, text: this.mode === 'fun' ? 'Currently: Fun Quiz Mode (trivia & entertainment)' : 'Currently: School Mode (Virginia SOL aligned)' }));
+    card.appendChild(UI.el('button', { class: 'btn-secondary w-full', text: this.mode === 'fun' ? '📚 Switch to School Mode' : '🎮 Switch to Fun Mode', onClick: () => { this.toggleMode(); } }));
 
     // Export data
     card.appendChild(UI.el('div', { class: 'ob-label mt-16', text: '📦 Your Data' }));
