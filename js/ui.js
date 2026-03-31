@@ -45,7 +45,7 @@ const UI = {
 
   // ── Bottom Nav ──
   renderNav(active, onNav) {
-    const items = [['home','🏠','Home'],['store','🎁','Rewards'],['stats','📊','Stats'],['badges','🏆','Badges']];
+    const items = [['home','🏠','Home'],['store','🎁','Prizes'],['stats','📊','Stats'],['badges','🏆','Badges']];
     const nav = this.el('div', { class: 'bottom-nav' });
     items.forEach(([id, icon, label]) => {
       nav.appendChild(this.el('button', {
@@ -102,7 +102,11 @@ const UI = {
     header.appendChild(xpCard);
 
     // Tier info
-    header.appendChild(this.el('div', { class: 'tier-info', text: `📊 ${gs.answered} answered · ${acc}% accuracy · Tier ${unlockedTier + 1} unlocked` }));
+    const tierEmojis = ['🌱', '🌿', '🌳', '🏆'];
+    const tierLabels = ['Starter', 'Explorer', 'Scholar', 'Champion'];
+    const tierEmoji = tierEmojis[unlockedTier] || '🌱';
+    const tierLabel = tierLabels[unlockedTier] || 'Starter';
+    header.appendChild(this.el('div', { class: 'tier-info', text: `${tierEmoji} ${tierLabel} · ${gs.answered} answered · ${acc}% accuracy` }));
     page.appendChild(header);
 
     // Error/Loading
@@ -127,10 +131,59 @@ const UI = {
     const catSection = this.el('div', { class: 'section' });
     catSection.appendChild(this.el('div', { class: 'section-title', text: 'Pick a topic!' }));
     const grid = this.el('div', { class: 'cat-grid' });
-    CATEGORIES.forEach(c => {
+
+    // Group categories by tier for dividers
+    let lastTier = -1;
+    const sortedCats = [...CATEGORIES].sort((a, b) => a.tier - b.tier);
+
+    sortedCats.forEach(c => {
       const unlocked = GameLogic.isCatUnlocked(c, gs);
       const played = gs.catsPlayed.includes(c.key);
       const nextTier = TIER_THRESHOLDS.find(t => t.tier === c.tier);
+
+      // Insert tier unlock banner before first locked tier group
+      if (c.tier !== lastTier && !unlocked && c.tier > lastTier) {
+        const qsNeeded = Math.max(0, nextTier.qs - gs.answered);
+        const currentAcc = acc;
+        const accOk = currentAcc >= nextTier.acc;
+        const tierNames = { 1: 'Explorer', 2: 'Scholar', 3: 'Champion' };
+        const tierName = tierNames[c.tier] || 'Tier ' + c.tier;
+
+        const banner = this.el('div', { class: 'tier-unlock-banner' });
+        const bannerIcon = this.el('span', { class: 'tier-banner-icon', text: qsNeeded === 0 && accOk ? '🔓' : '🔒' });
+        banner.appendChild(bannerIcon);
+
+        const bannerText = this.el('div', { class: 'tier-banner-text' });
+        if (qsNeeded > 0 && !accOk) {
+          bannerText.appendChild(this.el('div', { class: 'tier-banner-title', text: `${tierName} Pack — ${qsNeeded} more Qs + reach ${nextTier.acc}%` }));
+        } else if (qsNeeded > 0) {
+          bannerText.appendChild(this.el('div', { class: 'tier-banner-title', text: `${tierName} Pack — ${qsNeeded} more questions to go!` }));
+        } else if (!accOk) {
+          bannerText.appendChild(this.el('div', { class: 'tier-banner-title', text: `${tierName} Pack — Boost accuracy to ${nextTier.acc}%!` }));
+        }
+
+        // Progress bar toward unlock
+        const progress = Math.min(100, Math.round((gs.answered / nextTier.qs) * 100));
+        const track = this.el('div', { class: 'tier-progress-track' });
+        track.appendChild(this.el('div', { class: 'tier-progress-fill', style: { width: progress + '%' } }));
+        bannerText.appendChild(track);
+
+        // Motivating message
+        const msgs = [
+          'You\'re doing great — keep it up! 🌟',
+          'Every question gets you closer! 💪',
+          'New categories are waiting for you! 🎉',
+          'Almost there — don\'t stop now! 🚀',
+          'Brain power is building! 🧠✨',
+        ];
+        const msg = msgs[Math.floor(gs.answered / 10) % msgs.length];
+        bannerText.appendChild(this.el('div', { class: 'tier-banner-motivation', text: msg }));
+
+        banner.appendChild(bannerText);
+        grid.appendChild(banner);
+        lastTier = c.tier;
+      }
+      if (c.tier !== lastTier && unlocked) lastTier = c.tier;
 
       const card = this.el('button', {
         class: 'cat-card' + (!unlocked ? ' locked' : ''),
@@ -146,7 +199,9 @@ const UI = {
       }
       if (!unlocked) {
         card.appendChild(this.el('span', { class: 'cat-lock', text: '🔒' }));
-        card.appendChild(this.el('span', { class: 'cat-unlock-hint', text: `${nextTier.qs} Qs + ${nextTier.acc}%` }));
+        // Show progress fraction instead of just threshold
+        const pctDone = Math.min(100, Math.round((gs.answered / nextTier.qs) * 100));
+        card.appendChild(this.el('span', { class: 'cat-unlock-hint', text: `${gs.answered}/${nextTier.qs} Qs · ${pctDone}%` }));
       }
       grid.appendChild(card);
     });
@@ -345,37 +400,132 @@ const UI = {
   renderStore({ gs, filter, muted, redeemMsg, onFilter, onRedeem, onNav, onBack }) {
     this.clear();
     const page = this.el('div');
+
+    // Top bar
     const bar = this.el('div', { class: 'page-bar' });
     bar.appendChild(this.el('button', { class: 'back-btn', text: '‹', onClick: onBack }));
-    bar.appendChild(this.el('div', { class: 'page-title', text: 'Rewards' }));
+    bar.appendChild(this.el('div', { class: 'page-title', text: 'Reward Box' }));
     bar.appendChild(this.el('div', { style: { marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)', fontSize: '15px' }, text: Math.floor(gs.xp) + ' XP' }));
     page.appendChild(bar);
 
-    const types = [['all','All'],['digital','Stickers'],['giftcard','Gift Cards'],['physical','Toys'],['donate','Donate']];
+    // ── Treasure Box Hero ──
+    const hero = this.el('div', { class: 'reward-hero' });
+    const heroIcon = this.el('div', { class: 'reward-hero-icon', text: '🎁' });
+    hero.appendChild(heroIcon);
+    const heroText = this.el('div', { class: 'reward-hero-text' });
+
+    const ownedStickers = (gs.stickers || []).length;
+    const totalStickers = REWARDS.filter(r => r.type === 'digital').length;
+    const totalRedeemed = (gs.redeemed || []).length;
+
+    if (totalRedeemed === 0) {
+      heroText.appendChild(this.el('div', { class: 'reward-hero-title', text: 'Your Reward Box is empty!' }));
+      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Earn XP by answering questions, then spend it here on cool prizes!' }));
+    } else {
+      heroText.appendChild(this.el('div', { class: 'reward-hero-title', text: `${totalRedeemed} reward${totalRedeemed > 1 ? 's' : ''} collected!` }));
+      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Keep quizzing to earn more XP for bigger prizes.' }));
+    }
+    hero.appendChild(heroText);
+    page.appendChild(hero);
+
+    // ── Sticker Collection (if any owned) ──
+    if (ownedStickers > 0) {
+      const stickerSection = this.el('div', { class: 'sticker-collection' });
+      stickerSection.appendChild(this.el('div', { class: 'sticker-collection-title', text: `🏅 My Stickers (${ownedStickers}/${totalStickers})` }));
+      const stickerRow = this.el('div', { class: 'sticker-row' });
+      REWARDS.filter(r => r.type === 'digital').forEach(r => {
+        const owned = (gs.stickers || []).includes(r.id);
+        const s = this.el('div', {
+          class: 'sticker-slot' + (owned ? ' sticker-owned' : ''),
+          text: owned ? r.icon : '?',
+        });
+        if (owned) s.title = r.name;
+        stickerRow.appendChild(s);
+      });
+      stickerSection.appendChild(stickerRow);
+      page.appendChild(stickerSection);
+    }
+
+    // ── XP Balance Card ──
+    const xpCard = this.el('div', { class: 'reward-xp-card' });
+    const xpLeft = this.el('div', { class: 'reward-xp-left' });
+    xpLeft.appendChild(this.el('div', { class: 'reward-xp-amount', text: Math.floor(gs.xp) }));
+    xpLeft.appendChild(this.el('div', { class: 'reward-xp-label', text: 'XP to spend' }));
+    xpCard.appendChild(xpLeft);
+
+    // Next affordable reward hint
+    const affordable = REWARDS.filter(r => r.cost <= gs.xp && !(gs.stickers || []).includes(r.id));
+    const nextUp = REWARDS.filter(r => r.cost > gs.xp).sort((a, b) => a.cost - b.cost)[0];
+    const xpRight = this.el('div', { class: 'reward-xp-right' });
+    if (affordable.length > 0) {
+      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `🎯 You can afford ${affordable.length} reward${affordable.length > 1 ? 's' : ''}!` }));
+    } else if (nextUp) {
+      const gap = nextUp.cost - Math.floor(gs.xp);
+      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `${gap} more XP until ${nextUp.icon} ${nextUp.name}` }));
+    }
+    xpCard.appendChild(xpRight);
+    page.appendChild(xpCard);
+
+    // ── Category Filters ──
+    const types = [['all','🏪 All'],['digital','⭐ Stickers'],['giftcard','🎁 Gift Cards'],['physical','🧸 Toys'],['donate','💚 Donate']];
     const filters = this.el('div', { class: 'store-filters' });
     types.forEach(([k, l]) => {
       filters.appendChild(this.el('button', { class: 'filter-btn' + (filter === k ? ' active' : ''), text: l, onClick: () => onFilter(k) }));
     });
     page.appendChild(filters);
 
+    // ── Redeem message ──
     if (redeemMsg) page.appendChild(this.el('div', { class: 'redeem-msg', text: redeemMsg }));
 
+    // ── Reward Cards Grid ──
     const filtered = filter === 'all' ? REWARDS : REWARDS.filter(r => r.type === filter);
     const grid = this.el('div', { class: 'store-grid' });
     filtered.forEach(r => {
       const owned = (gs.stickers || []).includes(r.id);
-      const card = this.el('div', { class: 'reward-card' });
+      const canAfford = gs.xp >= r.cost;
+      const card = this.el('div', { class: 'reward-card' + (owned ? ' reward-owned' : '') + (canAfford && !owned ? ' reward-affordable' : '') });
+
+      // Glow ring for affordable items
+      if (canAfford && !owned) {
+        card.appendChild(this.el('div', { class: 'reward-glow' }));
+      }
+
       card.appendChild(this.el('div', { class: 'reward-icon', text: r.icon }));
       card.appendChild(this.el('div', { class: 'reward-name', text: r.name }));
       card.appendChild(this.el('div', { class: 'reward-desc', text: r.desc }));
+
+      // Cost bar
+      const costBar = this.el('div', { class: 'reward-cost-bar' });
       if (owned) {
-        card.appendChild(this.el('div', { style: { fontSize: '12px', color: 'var(--correct)', fontWeight: 700 }, text: '✓ Owned' }));
+        costBar.appendChild(this.el('div', { class: 'reward-owned-badge', text: '✓ Collected!' }));
       } else {
-        card.appendChild(this.el('button', { class: 'redeem-btn', disabled: gs.xp < r.cost, text: r.cost + ' XP', onClick: () => onRedeem(r) }));
+        const costTrack = this.el('div', { class: 'reward-cost-track' });
+        const costPct = Math.min(100, Math.round((gs.xp / r.cost) * 100));
+        costTrack.appendChild(this.el('div', { class: 'reward-cost-fill', style: { width: costPct + '%' } }));
+        costBar.appendChild(costTrack);
+        costBar.appendChild(this.el('button', {
+          class: 'redeem-btn' + (canAfford ? ' redeem-ready' : ''),
+          disabled: !canAfford,
+          text: canAfford ? 'Get it! (' + r.cost + ' XP)' : r.cost + ' XP',
+          onClick: () => onRedeem(r)
+        }));
       }
+      card.appendChild(costBar);
       grid.appendChild(card);
     });
     page.appendChild(grid);
+
+    // ── How XP Works ──
+    const howSection = this.el('div', { class: 'reward-how' });
+    howSection.appendChild(this.el('div', { class: 'reward-how-title', text: 'How do I earn XP?' }));
+    const tips = [
+      '✅ Correct answer = 10 XP (15 XP if under 5 sec!)',
+      '🔥 Streak bonus = +3 XP per answer',
+      '❌ Wrong answer = 2 XP (you still learn!)',
+    ];
+    tips.forEach(t => howSection.appendChild(this.el('div', { class: 'reward-how-tip', text: t })));
+    page.appendChild(howSection);
+
     page.appendChild(this.renderNav('store', onNav));
     this._app.appendChild(page);
   },
