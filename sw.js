@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roquiz-v1';
+const CACHE_NAME = 'roquiz-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -8,8 +8,10 @@ const ASSETS = [
   '/js/storage.js',
   '/js/themes.js',
   '/js/audio.js',
+  '/js/graded-questions.js',
   '/js/questions.js',
   '/js/fallback-questions.js',
+  '/js/sol-questions.js',
   '/js/sol-standards.js',
   '/js/game.js',
   '/js/ui.js',
