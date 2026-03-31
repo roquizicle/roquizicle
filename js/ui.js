@@ -84,7 +84,7 @@ const UI = {
 
     // Profile chip
     const chip = this.el('div', { class: 'profile-chip', onClick: onSettings });
-    chip.appendChild(this.el('span', { text: '👤' }));
+    chip.appendChild(this.el('span', { class: 'avatar-icon', text: GameLogic.getAvatarIcon(gs) }));
     chip.appendChild(this.el('span', { class: 'profile-name', text: profile.name }));
     chip.appendChild(this.el('span', { class: 'profile-meta', text: `${profile.grade} · ${profile.country}` }));
     header.appendChild(chip);
@@ -397,7 +397,7 @@ const UI = {
   },
 
   // ── Store Screen ──
-  renderStore({ gs, filter, muted, redeemMsg, onFilter, onRedeem, onNav, onBack }) {
+  renderStore({ gs, filter, muted, redeemMsg, onFilter, onRedeem, onBuyAvatar, onEquipAvatar, onWishlist, onNav, onBack }) {
     this.clear();
     const page = this.el('div');
 
@@ -413,32 +413,89 @@ const UI = {
     const heroIcon = this.el('div', { class: 'reward-hero-icon', text: '🎁' });
     hero.appendChild(heroIcon);
     const heroText = this.el('div', { class: 'reward-hero-text' });
-
-    const ownedStickers = (gs.stickers || []).length;
-    const totalStickers = REWARDS.filter(r => r.type === 'digital').length;
-    const totalRedeemed = (gs.redeemed || []).length;
-
-    if (totalRedeemed === 0) {
+    const totalCollected = (gs.stickers || []).length + (gs.soundpacks || []).length + (gs.avatarsOwned || []).length;
+    const swagUnlocked = GameLogic.getUnlockedSwag(gs).length;
+    if (totalCollected === 0 && swagUnlocked === 0) {
       heroText.appendChild(this.el('div', { class: 'reward-hero-title', text: 'Your Reward Box is empty!' }));
-      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Earn XP by answering questions, then spend it here on cool prizes!' }));
+      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Earn XP by answering questions, then spend it on prizes & avatars!' }));
     } else {
-      heroText.appendChild(this.el('div', { class: 'reward-hero-title', text: `${totalRedeemed} reward${totalRedeemed > 1 ? 's' : ''} collected!` }));
-      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Keep quizzing to earn more XP for bigger prizes.' }));
+      heroText.appendChild(this.el('div', { class: 'reward-hero-title', text: `${totalCollected + swagUnlocked} treasure${totalCollected + swagUnlocked > 1 ? 's' : ''} collected!` }));
+      heroText.appendChild(this.el('div', { class: 'reward-hero-sub', text: 'Keep quizzing for more XP, swag, and unlocks.' }));
     }
     hero.appendChild(heroText);
     page.appendChild(hero);
 
-    // ── Sticker Collection (if any owned) ──
+    // ── Roquiz Swag Section ──
+    const swagSection = this.el('div', { class: 'swag-section' });
+    swagSection.appendChild(this.el('div', { class: 'swag-section-title', text: '👕 Roquiz Swag — Milestone Rewards' }));
+    swagSection.appendChild(this.el('div', { class: 'swag-section-sub', text: 'These special prizes unlock when you reach milestones!' }));
+    const swagRow = this.el('div', { class: 'swag-row' });
+    SWAG.forEach(s => {
+      const unlocked = (gs.badges || []).includes(s.milestone);
+      const card = this.el('div', { class: 'swag-card' + (unlocked ? ' swag-unlocked' : '') });
+      card.appendChild(this.el('div', { class: 'swag-icon', text: unlocked ? s.icon : '🔒' }));
+      card.appendChild(this.el('div', { class: 'swag-name', text: s.name }));
+      if (unlocked) {
+        card.appendChild(this.el('div', { class: 'swag-status', text: '✓ Unlocked!' }));
+      } else {
+        card.appendChild(this.el('div', { class: 'swag-milestone', text: s.milestoneDesc }));
+        // Show progress for question milestones
+        const qMatch = s.milestoneDesc.match(/Answer (\d+)/);
+        if (qMatch) {
+          const target = parseInt(qMatch[1]);
+          const pct = Math.min(100, Math.round((gs.answered / target) * 100));
+          const track = this.el('div', { class: 'swag-progress-track' });
+          track.appendChild(this.el('div', { class: 'swag-progress-fill', style: { width: pct + '%' } }));
+          card.appendChild(track);
+          card.appendChild(this.el('div', { class: 'swag-progress-text', text: `${gs.answered}/${target}` }));
+        }
+      }
+      swagRow.appendChild(card);
+    });
+    swagSection.appendChild(swagRow);
+    page.appendChild(swagSection);
+
+    // ── Avatar Section ──
+    const avSection = this.el('div', { class: 'avatar-section' });
+    avSection.appendChild(this.el('div', { class: 'swag-section-title', text: '😎 Avatars — Show Your Style' }));
+    const currentAvId = GameLogic.getAvatar(gs);
+    const avGrid = this.el('div', { class: 'avatar-grid' });
+    AVATARS.forEach(av => {
+      const unlocked = GameLogic.isAvatarUnlocked(av, gs);
+      const equipped = currentAvId === av.id;
+      const card = this.el('div', { class: 'avatar-card' + (equipped ? ' avatar-equipped' : '') + (!unlocked ? ' avatar-locked' : '') });
+      card.appendChild(this.el('div', { class: 'avatar-card-icon', text: unlocked ? av.icon : '🔒' }));
+      card.appendChild(this.el('div', { class: 'avatar-card-name', text: av.name }));
+      if (equipped) {
+        card.appendChild(this.el('div', { class: 'avatar-card-status', text: '✓ Equipped' }));
+      } else if (unlocked) {
+        card.appendChild(this.el('button', { class: 'avatar-equip-btn', text: 'Use', onClick: () => onEquipAvatar(av.id) }));
+      } else if (av.cost === -1) {
+        const badge = BADGES.find(b => b.id === av.badge);
+        card.appendChild(this.el('div', { class: 'avatar-card-hint', text: badge ? badge.desc : 'Earn badge' }));
+      } else {
+        card.appendChild(this.el('button', {
+          class: 'avatar-buy-btn',
+          disabled: gs.xp < av.cost,
+          text: av.cost + ' XP',
+          onClick: () => onBuyAvatar(av)
+        }));
+      }
+      avGrid.appendChild(card);
+    });
+    avSection.appendChild(avGrid);
+    page.appendChild(avSection);
+
+    // ── Sticker Collection ──
+    const ownedStickers = (gs.stickers || []).length;
+    const totalStickers = REWARDS.filter(r => r.type === 'digital').length;
     if (ownedStickers > 0) {
       const stickerSection = this.el('div', { class: 'sticker-collection' });
       stickerSection.appendChild(this.el('div', { class: 'sticker-collection-title', text: `🏅 My Stickers (${ownedStickers}/${totalStickers})` }));
       const stickerRow = this.el('div', { class: 'sticker-row' });
       REWARDS.filter(r => r.type === 'digital').forEach(r => {
         const owned = (gs.stickers || []).includes(r.id);
-        const s = this.el('div', {
-          class: 'sticker-slot' + (owned ? ' sticker-owned' : ''),
-          text: owned ? r.icon : '?',
-        });
+        const s = this.el('div', { class: 'sticker-slot' + (owned ? ' sticker-owned' : ''), text: owned ? r.icon : '?' });
         if (owned) s.title = r.name;
         stickerRow.appendChild(s);
       });
@@ -452,22 +509,20 @@ const UI = {
     xpLeft.appendChild(this.el('div', { class: 'reward-xp-amount', text: Math.floor(gs.xp) }));
     xpLeft.appendChild(this.el('div', { class: 'reward-xp-label', text: 'XP to spend' }));
     xpCard.appendChild(xpLeft);
-
-    // Next affordable reward hint
-    const affordable = REWARDS.filter(r => r.cost <= gs.xp && !(gs.stickers || []).includes(r.id));
-    const nextUp = REWARDS.filter(r => r.cost > gs.xp).sort((a, b) => a.cost - b.cost)[0];
+    const allOwned = [...(gs.stickers || []), ...(gs.soundpacks || []), ...(gs.avatarsOwned || [])];
+    const affordable = REWARDS.filter(r => r.cost <= gs.xp && !allOwned.includes(r.id));
+    const nextUp = REWARDS.filter(r => r.cost > gs.xp && !allOwned.includes(r.id)).sort((a, b) => a.cost - b.cost)[0];
     const xpRight = this.el('div', { class: 'reward-xp-right' });
     if (affordable.length > 0) {
-      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `🎯 You can afford ${affordable.length} reward${affordable.length > 1 ? 's' : ''}!` }));
+      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `🎯 You can afford ${affordable.length} item${affordable.length > 1 ? 's' : ''}!` }));
     } else if (nextUp) {
-      const gap = nextUp.cost - Math.floor(gs.xp);
-      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `${gap} more XP until ${nextUp.icon} ${nextUp.name}` }));
+      xpRight.appendChild(this.el('div', { class: 'reward-xp-hint', text: `${Math.ceil(nextUp.cost - gs.xp)} more XP until ${nextUp.icon} ${nextUp.name}` }));
     }
     xpCard.appendChild(xpRight);
     page.appendChild(xpCard);
 
     // ── Category Filters ──
-    const types = [['all','🏪 All'],['digital','⭐ Stickers'],['giftcard','🎁 Gift Cards'],['physical','🧸 Toys'],['donate','💚 Donate']];
+    const types = [['all','🏪 All'],['digital','⭐ Stickers'],['soundpack','🔊 Sounds'],['giftcard','🎁 Gift Cards'],['physical','🧸 Toys'],['donate','💚 Donate']];
     const filters = this.el('div', { class: 'store-filters' });
     types.forEach(([k, l]) => {
       filters.appendChild(this.el('button', { class: 'filter-btn' + (filter === k ? ' active' : ''), text: l, onClick: () => onFilter(k) }));
@@ -481,20 +536,17 @@ const UI = {
     const filtered = filter === 'all' ? REWARDS : REWARDS.filter(r => r.type === filter);
     const grid = this.el('div', { class: 'store-grid' });
     filtered.forEach(r => {
-      const owned = (gs.stickers || []).includes(r.id);
+      const owned = allOwned.includes(r.id);
       const canAfford = gs.xp >= r.cost;
+      const onWL = (gs.wishlist || []).find(w => w.id === r.id);
+      const isPhysical = ['giftcard', 'physical', 'donate'].includes(r.type);
       const card = this.el('div', { class: 'reward-card' + (owned ? ' reward-owned' : '') + (canAfford && !owned ? ' reward-affordable' : '') });
 
-      // Glow ring for affordable items
-      if (canAfford && !owned) {
-        card.appendChild(this.el('div', { class: 'reward-glow' }));
-      }
-
+      if (canAfford && !owned) card.appendChild(this.el('div', { class: 'reward-glow' }));
       card.appendChild(this.el('div', { class: 'reward-icon', text: r.icon }));
       card.appendChild(this.el('div', { class: 'reward-name', text: r.name }));
       card.appendChild(this.el('div', { class: 'reward-desc', text: r.desc }));
 
-      // Cost bar
       const costBar = this.el('div', { class: 'reward-cost-bar' });
       if (owned) {
         costBar.appendChild(this.el('div', { class: 'reward-owned-badge', text: '✓ Collected!' }));
@@ -503,12 +555,29 @@ const UI = {
         const costPct = Math.min(100, Math.round((gs.xp / r.cost) * 100));
         costTrack.appendChild(this.el('div', { class: 'reward-cost-fill', style: { width: costPct + '%' } }));
         costBar.appendChild(costTrack);
-        costBar.appendChild(this.el('button', {
-          class: 'redeem-btn' + (canAfford ? ' redeem-ready' : ''),
-          disabled: !canAfford,
-          text: canAfford ? 'Get it! (' + r.cost + ' XP)' : r.cost + ' XP',
-          onClick: () => onRedeem(r)
-        }));
+
+        if (isPhysical) {
+          // Wishlist button for physical items
+          const wlRow = this.el('div', { class: 'reward-btn-row' });
+          if (onWL) {
+            wlRow.appendChild(this.el('div', { class: 'wishlist-added', text: '💝 On Wishlist' }));
+          } else {
+            wlRow.appendChild(this.el('button', { class: 'wishlist-btn', text: '💝 Add to Wishlist', onClick: () => onWishlist(r, 'add') }));
+          }
+          if (canAfford) {
+            wlRow.appendChild(this.el('button', { class: 'redeem-btn redeem-ready', text: 'Redeem ' + r.cost, onClick: () => onRedeem(r) }));
+          } else {
+            wlRow.appendChild(this.el('div', { class: 'reward-cost-label', text: r.cost + ' XP' }));
+          }
+          costBar.appendChild(wlRow);
+        } else {
+          costBar.appendChild(this.el('button', {
+            class: 'redeem-btn' + (canAfford ? ' redeem-ready' : ''),
+            disabled: !canAfford,
+            text: canAfford ? 'Get it! (' + r.cost + ' XP)' : r.cost + ' XP',
+            onClick: () => onRedeem(r)
+          }));
+        }
       }
       card.appendChild(costBar);
       grid.appendChild(card);
@@ -522,6 +591,7 @@ const UI = {
       '✅ Correct answer = 10 XP (15 XP if under 5 sec!)',
       '🔥 Streak bonus = +3 XP per answer',
       '❌ Wrong answer = 2 XP (you still learn!)',
+      '👕 Swag unlocks at milestones — no XP needed!',
     ];
     tips.forEach(t => howSection.appendChild(this.el('div', { class: 'reward-how-tip', text: t })));
     page.appendChild(howSection);

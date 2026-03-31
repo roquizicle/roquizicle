@@ -158,6 +158,9 @@ const App = {
           redeemMsg: this.redeemMsg,
           onFilter: (f) => { this.storeFilter = f; this.render(); },
           onRedeem: (r) => this.redeemReward(r),
+          onBuyAvatar: (av) => this.buyAvatar(av),
+          onEquipAvatar: (avId) => this.equipAvatar(avId),
+          onWishlist: (r, action) => this.toggleWishlist(r, action),
           onNav: (v) => this.navigate(v),
           onBack: () => this.navigate('home'),
         });
@@ -337,6 +340,47 @@ const App = {
     setTimeout(() => { this.redeemMsg = null; this.render(); }, 3000);
   },
 
+  // ── Buy Avatar ──
+  buyAvatar(av) {
+    const result = GameLogic.buyAvatar(this.gs, av);
+    if (result.success) {
+      this.gs = result.gameState;
+      // Auto-equip after buying
+      this.gs = GameLogic.equipAvatar(this.gs, av.id);
+      Storage.saveGameState(this.gs);
+      Audio.badge();
+      this.redeemMsg = '😎 ' + av.name + ' avatar unlocked & equipped!';
+    } else {
+      this.redeemMsg = 'Not enough XP!';
+    }
+    this.render();
+    setTimeout(() => { this.redeemMsg = null; this.render(); }, 3000);
+  },
+
+  // ── Equip Avatar ──
+  equipAvatar(avId) {
+    this.gs = GameLogic.equipAvatar(this.gs, avId);
+    Storage.saveGameState(this.gs);
+    Audio.tap();
+    this.redeemMsg = '✓ Avatar changed!';
+    this.render();
+    setTimeout(() => { this.redeemMsg = null; this.render(); }, 2000);
+  },
+
+  // ── Wishlist ──
+  toggleWishlist(reward, action) {
+    if (action === 'add') {
+      this.gs = GameLogic.addToWishlist(this.gs, reward);
+      this.redeemMsg = '💝 ' + reward.name + ' added to wishlist!';
+    } else {
+      this.gs = GameLogic.removeFromWishlist(this.gs, reward.id);
+      this.redeemMsg = reward.name + ' removed from wishlist.';
+    }
+    Storage.saveGameState(this.gs);
+    this.render();
+    setTimeout(() => { this.redeemMsg = null; this.render(); }, 2500);
+  },
+
   // ── Theme Picker ──
   showThemePicker() {
     const picker = ThemeEngine.renderPicker(ThemeEngine.getCurrent(), (themeId) => {
@@ -506,7 +550,7 @@ const App = {
 
     // Profile chip
     const chip = UI.el('div', { class: 'profile-chip', onClick: () => this.navigate('settings') });
-    chip.appendChild(UI.el('span', { text: '👤' }));
+    chip.appendChild(UI.el('span', { class: 'avatar-icon', text: GameLogic.getAvatarIcon(this.gs) }));
     chip.appendChild(UI.el('span', { class: 'profile-name', text: this.profile.name }));
     chip.appendChild(UI.el('span', { class: 'profile-meta', text: `${this.profile.grade} · LCPS / Virginia SOL` }));
     header.appendChild(chip);
@@ -733,6 +777,42 @@ const App = {
       a.href = url; a.download = 'roquiz-data.json'; a.click();
       URL.revokeObjectURL(url);
     }}));
+
+    // ── Wishlist (for parents) ──
+    const wishlist = this.gs.wishlist || [];
+    if (wishlist.length > 0) {
+      card.appendChild(UI.el('div', { class: 'ob-label mt-16', text: '💝 Wishlist (for parents)' }));
+      card.appendChild(UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }, text: `${this.profile.name} has ${wishlist.length} item${wishlist.length > 1 ? 's' : ''} on their wishlist:` }));
+      const wlList = UI.el('div', { class: 'wishlist-list' });
+      wishlist.forEach(w => {
+        const row = UI.el('div', { class: 'wishlist-row' });
+        row.appendChild(UI.el('span', { class: 'wishlist-row-icon', text: w.icon }));
+        row.appendChild(UI.el('span', { class: 'wishlist-row-name', text: w.name }));
+        row.appendChild(UI.el('button', { class: 'wishlist-remove-btn', text: '✕', onClick: () => {
+          this.gs = GameLogic.removeFromWishlist(this.gs, w.id);
+          Storage.saveGameState(this.gs);
+          this.render();
+        }}));
+        wlList.appendChild(row);
+      });
+      card.appendChild(wlList);
+    }
+
+    // ── Swag Unlocks (for parents) ──
+    const unlockedSwag = GameLogic.getUnlockedSwag(this.gs);
+    if (unlockedSwag.length > 0) {
+      card.appendChild(UI.el('div', { class: 'ob-label mt-16', text: '👕 Earned Roquiz Swag' }));
+      card.appendChild(UI.el('div', { style: { fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }, text: `${this.profile.name} has earned these swag rewards! Contact us to claim:` }));
+      const swagList = UI.el('div', { class: 'wishlist-list' });
+      unlockedSwag.forEach(s => {
+        const row = UI.el('div', { class: 'wishlist-row' });
+        row.appendChild(UI.el('span', { class: 'wishlist-row-icon', text: s.icon }));
+        row.appendChild(UI.el('span', { class: 'wishlist-row-name', text: s.name }));
+        row.appendChild(UI.el('span', { style: { color: 'var(--correct)', fontWeight: 700, fontSize: '11px' }, text: '✓ Earned' }));
+        swagList.appendChild(row);
+      });
+      card.appendChild(swagList);
+    }
 
     // Save
     card.appendChild(UI.el('button', { class: 'btn-primary w-full mt-16', text: 'Save Changes', onClick: () => { Storage.saveProfile(this.profile); this.navigate('home'); } }));

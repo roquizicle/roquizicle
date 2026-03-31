@@ -39,7 +39,9 @@ const Storage = {
   getGameState() {
     return this.get('gamestate') || {
       xp: 0, correct: 0, answered: 0, streak: 0, bestStreak: 0,
-      badges: [], catsPlayed: [], redeemed: [], stickers: []
+      badges: [], catsPlayed: [], redeemed: [], stickers: [],
+      avatar: 'av_default', avatarsOwned: [], wishlist: [],
+      soundpacks: [], perfectRounds: 0
     };
   },
 
