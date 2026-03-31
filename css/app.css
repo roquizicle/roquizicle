@@ -235,6 +235,60 @@ body {
   margin-top: 2px;
 }
 
+/* ── Tier Unlock Banner ── */
+.tier-unlock-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,152,0,0.08));
+  border: 2px dashed rgba(255,215,0,0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 6px 0;
+}
+
+.tier-banner-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.tier-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tier-banner-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.3;
+}
+
+.tier-progress-track {
+  height: 8px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.tier-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFD700, #FF9800);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+
+.tier-banner-motivation {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+
 /* ── Quiz View ── */
 .quiz-header {
   padding: 14px 16px 8px;
@@ -680,7 +734,7 @@ body {
   background: var(--bg-card);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
@@ -693,36 +747,239 @@ body {
   color: var(--accent);
 }
 
+/* ── Reward Hero Banner ── */
+.reward-hero {
+  margin: 12px 16px 8px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  border: 2px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reward-hero-icon {
+  font-size: 44px;
+  animation: heroBounce 2s ease-in-out infinite;
+}
+
+@keyframes heroBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.1); }
+}
+
+.reward-hero-text { flex: 1; }
+
+.reward-hero-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.3;
+}
+
+.reward-hero-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ── Sticker Collection ── */
+.sticker-collection {
+  margin: 8px 16px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+}
+
+.sticker-collection-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 8px;
+}
+
+.sticker-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sticker-slot {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 2px dashed var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.4;
+  background: var(--bg-secondary);
+}
+
+.sticker-slot.sticker-owned {
+  opacity: 1;
+  font-size: 22px;
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent)15;
+  animation: stickerPop 0.4s ease;
+}
+
+@keyframes stickerPop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ── XP Balance Card ── */
+.reward-xp-card {
+  margin: 8px 16px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent)18, var(--accent-secondary)18);
+  border: 2px solid var(--accent)44;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reward-xp-left { text-align: center; min-width: 70px; }
+
+.reward-xp-amount {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.reward-xp-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.reward-xp-right { flex: 1; }
+
+.reward-xp-hint {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* ── Reward Cards Grid ── */
 .store-grid {
   padding: 8px 16px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  padding-bottom: 80px;
 }
 
 .reward-card {
   background: var(--bg-card);
   border-radius: var(--radius);
   border: 2px solid var(--border-light);
-  padding: 14px;
+  padding: 14px 12px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.3s;
+}
+
+.reward-card.reward-affordable {
+  border-color: var(--accent);
+}
+
+.reward-card.reward-owned {
+  border-color: var(--correct);
+  background: var(--correct)10;
+}
+
+.reward-card:hover { transform: scale(1.02); }
+
+.reward-glow {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent)20, transparent, var(--accent-secondary)20);
+  animation: glowPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 .reward-icon { font-size: 36px; margin-bottom: 4px; }
-.reward-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 2px; }
-.reward-desc { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; min-height: 28px; }
+.reward-name { font-family: var(--font-heading); font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 2px; }
+.reward-desc { font-size: 10px; color: var(--text-secondary); margin-bottom: 8px; min-height: 28px; line-height: 1.3; }
+
+/* ── Cost bar & progress ── */
+.reward-cost-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reward-cost-track {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.reward-cost-fill {
+  height: 100%;
+  background: var(--xp-gradient);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  min-width: 3px;
+}
+
+.reward-owned-badge {
+  font-size: 12px;
+  color: var(--correct);
+  font-weight: 700;
+  padding: 6px 0;
+}
 
 .redeem-btn {
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 10px;
-  background: var(--btn-primary);
-  border: none;
-  color: var(--btn-primary-text);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-light);
+  color: var(--text-secondary);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   font-family: var(--font-body);
-  transition: transform 0.15s;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.redeem-btn.redeem-ready {
+  background: var(--btn-primary);
+  border-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+  animation: readyPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes readyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
 }
 
 .redeem-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -730,13 +987,44 @@ body {
 
 .redeem-msg {
   margin: 8px 16px;
-  padding: 10px;
+  padding: 12px;
   background: var(--correct)20;
   border: 2px solid var(--correct);
   border-radius: 12px;
   color: var(--correct);
   font-weight: 700;
   text-align: center;
+  font-size: 14px;
+  animation: msgPop 0.3s ease;
+}
+
+@keyframes msgPop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── How XP Works ── */
+.reward-how {
+  margin: 16px 16px 20px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+}
+
+.reward-how-title {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 8px;
+}
+
+.reward-how-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 2px 0;
 }
 
 /* ── Onboarding ── */
