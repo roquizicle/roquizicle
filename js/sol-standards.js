@@ -347,6 +347,7 @@ const SOL_STANDARDS = {
 };
 
 // ── SOL Question Engine ──
+// Uses pre-baked SOL_QUESTIONS as PRIMARY source (no API needed)
 const SOLEngine = {
   // Get all standards for a subject and grade
   getStandards(subject, grade) {
@@ -364,41 +365,25 @@ const SOLEngine = {
     return [...new Set(stds.map(s => s.strand))];
   },
 
-  // Generate questions for a specific standard using Claude AI
-  async generateForStandard(standard, count, grade) {
-    const skillsList = standard.skills.join(", ");
-    try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
-          messages: [{
-            role: "user",
-            content: `You are creating quiz questions for a Virginia ${grade} student aligned to Virginia Standards of Learning (SOL) standard ${standard.code}: "${standard.title}".
-
-Description: ${standard.description}
-Skills to assess: ${skillsList}
-
-Generate exactly ${count} multiple choice questions. Each question must:
-- Be appropriate for ${grade} students
-- Directly assess one of the listed skills
-- Use clear, age-appropriate language
-- Have exactly 4 options with 1 correct answer
-- Be written as a complete, properly formatted sentence
-
-Return ONLY a valid JSON array: [{"q":"question","correct":"answer","options":["a","b","c","d"],"sol":"${standard.code}","skill":"skill being assessed"}]
-No markdown, no backticks.`
-          }]
-        })
-      });
-      if (!r.ok) return [];
-      const d = await r.json();
-      const t = d.content?.[0]?.text || "";
-      const p = JSON.parse(t.replace(/```json|```/g, "").trim());
-      return Array.isArray(p) && p[0]?.q ? p : [];
-    } catch { return []; }
+  // ── Fetch questions for a specific standard from pre-baked bank ──
+  fetchForStandard(standard, count, grade) {
+    if (typeof SOL_QUESTIONS === 'undefined') return [];
+    // Map grade display name to subject lookup
+    const subjectMap = { 'Math': 'Math', 'Science': 'Science', 'English': 'English', 'History': 'History' };
+    // Find subject by checking which subject contains this standard code
+    let subject = null;
+    for (const subj of Object.keys(SOL_QUESTIONS)) {
+      if (SOL_QUESTIONS[subj]?.[grade]?.[standard.code]) {
+        subject = subj;
+        break;
+      }
+    }
+    if (!subject) return [];
+    const bank = SOL_QUESTIONS[subject]?.[grade]?.[standard.code] || [];
+    if (!bank.length) return [];
+    // Shuffle and return requested count
+    const shuffled = [...bank].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
   },
 
   // Generate a mixed quiz across all standards for a subject+grade
@@ -411,16 +396,13 @@ No markdown, no backticks.`
 
     for (let i = 0; i < standards.length; i++) {
       if (onProgress) onProgress(`Loading ${subject} ${standards[i].code}... (${allQs.length}/${totalQuestions})`);
-      const qs = await this.generateForStandard(standards[i], qsPerStandard, grade);
+      const qs = this.fetchForStandard(standards[i], qsPerStandard, grade);
       allQs.push(...qs);
       if (allQs.length >= totalQuestions) break;
-      // Rate limit
-      await new Promise(r => setTimeout(r, 1200));
     }
 
     // Shuffle and trim
-    const shuffled = allQs.sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, totalQuestions);
+    return allQs.sort(() => Math.random() - 0.5).slice(0, totalQuestions);
   },
 
   // Generate a quiz for a specific strand
@@ -433,10 +415,9 @@ No markdown, no backticks.`
 
     for (const std of standards) {
       if (onProgress) onProgress(`Loading ${std.code}...`);
-      const qs = await this.generateForStandard(std, qsPerStandard, grade);
+      const qs = this.fetchForStandard(std, qsPerStandard, grade);
       allQs.push(...qs);
       if (allQs.length >= totalQuestions) break;
-      await new Promise(r => setTimeout(r, 1200));
     }
 
     return allQs.sort(() => Math.random() - 0.5).slice(0, totalQuestions);
