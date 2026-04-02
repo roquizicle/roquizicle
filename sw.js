@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roquiz-v5';
+const CACHE_NAME = 'roquiz-v6';
 const ASSETS = [
   '/',
   '/index.html',
