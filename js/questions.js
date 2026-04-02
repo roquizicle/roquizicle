@@ -52,7 +52,7 @@ async fetch(catDef, total, profile, onProgress) {
 let all = [];
 const needed = () => total - all.length;
 
-```
+
 // STEP 1: Pull from built-in graded question banks (PRIMARY)
 if (onProgress) onProgress('Loading questions...');
 const graded = this.fetchGraded(catDef.key, profile.grade);
@@ -114,7 +114,7 @@ all = all.filter(q => {
 
 if (onProgress) onProgress('');
 return this._shuffle(all).slice(0, total);
-```
+
 
 },
 
