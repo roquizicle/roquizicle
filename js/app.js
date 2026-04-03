@@ -33,7 +33,7 @@ async init() {
 UI.init();
 UI.renderSplash();
 
-```
+
 // Load saved data
 this.profile = Storage.getProfile();
 this.gs = Storage.getGameState();
@@ -56,7 +56,7 @@ setTimeout(() => {
   }
   this.render();
 }, 1500);
-```
+
 
 },
 
@@ -76,7 +76,7 @@ const pct = GameLogic.getLevelProgress(this.gs.xp);
 const unlockedTier = GameLogic.getUnlockedTier(this.gs);
 const acc = GameLogic.getAccuracy(this.gs);
 
-```
+
 switch (this.view) {
   case 'loading':
     UI.renderSplash();
@@ -182,7 +182,7 @@ switch (this.view) {
     this._renderSOLStrand();
     break;
 }
-```
+
 
 },
 
@@ -199,7 +199,7 @@ async startSOLQuiz(subject, strand) {
 await Audio.init();
 Audio.tap();
 
-```
+
 this.loading = true;
 this.error = null;
 this.solSubject = subject;
@@ -246,7 +246,7 @@ try {
   this.view = this.solStrand ? 'sol-strand' : 'sol';
 }
 this.render();
-```
+
 
 },
 
@@ -255,7 +255,7 @@ async startQuiz(category) {
 const catDef = CATEGORIES.find(c => c.key === category);
 if (!catDef || !GameLogic.isCatUnlocked(catDef, this.gs)) return;
 
-```
+
 await Audio.init();
 Audio.tap();
 
@@ -293,7 +293,7 @@ try {
   this.error = "Something went wrong loading questions. Please try again!";
 }
 this.render();
-```
+
 
 },
 
@@ -302,7 +302,7 @@ handleFlip(idx) {
 if (this.flipped !== null) return;
 this.flipped = idx;
 
-```
+
 const q = this.questions[this.qi];
 const isCorrect = q.options[idx] === q.correct;
 const elapsed = (Date.now() - this.qStart) / 1000;
@@ -330,7 +330,7 @@ if (result.leveledUp) {
 }
 
 this.render();
-```
+
 
 },
 
@@ -439,7 +439,7 @@ page.appendChild(UI.el(‘div’, { style: { fontSize: ‘48px’, marginBottom:
 page.appendChild(UI.el(‘div’, { style: { fontFamily: ‘var(–font-heading)’, fontSize: ‘28px’, fontWeight: 700, color: ‘var(–text-heading)’ }, text: ‘Welcome to Roquiz!’ }));
 page.appendChild(UI.el(‘div’, { style: { fontSize: ‘15px’, color: ‘var(–text-secondary)’, marginTop: ‘4px’, marginBottom: ‘24px’ }, text: “Let’s set up your profile” }));
 
-```
+
 const card = UI.el('div', { class: 'onboard-card' });
 
 if (this._obStep === 0) {
@@ -517,7 +517,7 @@ else if (this._obStep === 3) {
 
 page.appendChild(card);
 app.appendChild(page);
-```
+
 
 },
 
@@ -562,7 +562,7 @@ UI.clear();
 const app = document.getElementById(‘app’);
 const page = UI.el(‘div’);
 
-```
+
 // Header with mode toggle
 const header = UI.el('div', { class: 'header' });
 const logoRow = UI.el('div', { class: 'logo-row' });
@@ -676,7 +676,7 @@ subjects.forEach(sub => {
 page.appendChild(subSection);
 page.appendChild(UI.renderNav('home', (v) => this.navigate(v)));
 app.appendChild(page);
-```
+
 
 },
 
@@ -689,7 +689,7 @@ const sub = this.solSubject;
 const subjectColors = { Math: ‘#8E24AA’, Science: ‘#2196F3’, English: ‘#4CAF50’, History: ‘#FF9800’ };
 const subjectIcons = { Math: ‘🧮’, Science: ‘🔬’, English: ‘📖’, History: ‘🏛️’ };
 
-```
+
 const bar = UI.el('div', { class: 'page-bar' });
 bar.appendChild(UI.el('button', { class: 'back-btn', text: '‹', onClick: () => { this.view = 'home'; this.render(); } }));
 bar.appendChild(UI.el('div', { class: 'page-title', text: subjectIcons[sub] + ' ' + sub }));
@@ -756,7 +756,7 @@ strands.forEach(strand => {
 page.appendChild(strandSection);
 page.appendChild(UI.renderNav('home', (v) => this.navigate(v)));
 app.appendChild(page);
-```
+
 
 },
 _renderSettings() {
@@ -764,7 +764,7 @@ UI.clear();
 const app = document.getElementById(‘app’);
 const page = UI.el(‘div’);
 
-```
+
 const bar = UI.el('div', { class: 'page-bar' });
 bar.appendChild(UI.el('button', { class: 'back-btn', text: '‹', onClick: () => this.navigate('home') }));
 bar.appendChild(UI.el('div', { class: 'page-title', text: 'Settings' }));
@@ -876,7 +876,7 @@ page.appendChild(UI.el('button', { class: 'reset-btn', text: 'Reset All Data', o
 }}));
 
 app.appendChild(page);
-```
+
 
 },
 };
