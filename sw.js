@@ -1,4 +1,4 @@
-const CACHE_NAME = ‘roquiz-v7’;
+const CACHE_NAME = ‘roquiz-v8’;
 const ASSETS = [
 ‘./’,
 ‘./index.html’,
@@ -20,10 +20,8 @@ const ASSETS = [
 ];
 
 self.addEventListener(‘install’, e => {
-// Force activate immediately — don’t wait for old SW to finish
 self.skipWaiting();
 e.waitUntil(
-// Delete ALL old caches first, then cache fresh assets
 caches.keys().then(keys =>
 Promise.all(keys.map(k => caches.delete(k)))
 ).then(() => caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)))
@@ -40,11 +38,9 @@ self.clients.claim();
 });
 
 self.addEventListener(‘fetch’, e => {
-// Network first for everything — always try fresh files, fall back to cache
 e.respondWith(
 fetch(e.request)
 .then(response => {
-// Cache the fresh response for offline use
 if (response.ok) {
 const clone = response.clone();
 caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
