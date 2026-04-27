@@ -12,6 +12,7 @@ const ASSETS = [
   '/js/questions.js',
   '/js/fallback-questions.js',
   '/js/sol-questions.js',
+  '/js/sol-expansion.js',
   '/js/sol-standards.js',
   '/js/game.js',
   '/js/ui.js',
