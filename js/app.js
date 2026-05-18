@@ -12,6 +12,7 @@ const App = {
   qi: 0,
   flipped: null,
   score: 0,
+  wrongCount: 0,
   rStreak: 0,
   cat: null,
   roundSize: 10,
@@ -19,6 +20,9 @@ const App = {
   error: null,
   newBadges: [],
   qStart: 0,
+  quizStartTime: 0,
+  qTimes: [],        // ms per question
+  qResults: [],      // {q, correct, chosen, time, isRight} per question
   loadProgress: '',
   storeFilter: 'all',
   redeemMsg: null,
@@ -115,6 +119,7 @@ const App = {
           total: this.questions.length,
           question: this.questions[this.qi],
           score: this.score,
+          wrongCount: this.wrongCount,
           rStreak: this.rStreak,
           flipped: this.flipped,
           muted: Audio.isMuted(),
@@ -128,10 +133,21 @@ const App = {
       case 'results':
         UI.renderResults({
           score: this.score,
+          wrongCount: this.wrongCount,
           total: this.questions.length,
           newBadges: this.newBadges,
+          qTimes: this.qTimes,
+          qResults: this.qResults,
+          quizStartTime: this.quizStartTime,
+          cat: this.cat,
           onHome: () => this.navigate('home'),
-          onRetry: () => this.startQuiz(this.cat),
+          onRetry: () => {
+            if (this.mode === 'school') {
+              this.startSOLQuiz(this.solSubject, this.solStrand);
+            } else {
+              this.startQuiz(this.cat);
+            }
+          },
         });
         break;
 
@@ -200,42 +216,38 @@ const App = {
     this.cat = `${subject}: ${strand || 'All Standards'}`;
     this.qi = 0;
     this.score = 0;
+    this.wrongCount = 0;
     this.flipped = null;
     this.rStreak = 0;
     this.newBadges = [];
     this.qStart = Date.now();
+    this.quizStartTime = Date.now();
+    this.qTimes = [];
+    this.qResults = [];
     this.render();
 
-    try {
-      let qs;
-      if (strand) {
-        qs = await SOLEngine.generateStrandQuiz(subject, this.profile.grade, strand, this.roundSize, (prog) => {
-          this.loadProgress = prog;
-          this.render();
-        });
-      } else {
-        qs = await SOLEngine.generateQuiz(subject, this.profile.grade, this.roundSize, (prog) => {
-          this.loadProgress = prog;
-          this.render();
-        });
-      }
+    let qs;
+    if (strand) {
+      qs = await SOLEngine.generateStrandQuiz(subject, this.profile.grade, strand, this.roundSize, (prog) => {
+        this.loadProgress = prog;
+        this.render();
+      });
+    } else {
+      qs = await SOLEngine.generateQuiz(subject, this.profile.grade, this.roundSize, (prog) => {
+        this.loadProgress = prog;
+        this.render();
+      });
+    }
 
-      this.loading = false;
-      this.loadProgress = '';
+    this.loading = false;
+    this.loadProgress = '';
 
-      if (qs.length > 0) {
-        this.questions = qs;
-        this.view = 'quiz';
-        Audio.startBgMusic();
-      } else {
-        this.error = "Couldn't generate SOL questions. Please try again!";
-        this.view = this.solStrand ? 'sol-strand' : 'sol';
-      }
-    } catch (err) {
-      console.error('[Roquiz] SOL quiz load error:', err);
-      this.loading = false;
-      this.loadProgress = '';
-      this.error = "Something went wrong loading questions. Please try again!";
+    if (qs.length > 0) {
+      this.questions = qs;
+      this.view = 'quiz';
+      Audio.startBgMusic();
+    } else {
+      this.error = "Couldn't generate SOL questions. Please try again!";
       this.view = this.solStrand ? 'sol-strand' : 'sol';
     }
     this.render();
@@ -254,33 +266,30 @@ const App = {
     this.cat = category;
     this.qi = 0;
     this.score = 0;
+    this.wrongCount = 0;
     this.flipped = null;
     this.rStreak = 0;
     this.newBadges = [];
     this.qStart = Date.now();
+    this.quizStartTime = Date.now();
+    this.qTimes = [];
+    this.qResults = [];
     this.render();
 
-    try {
-      const qs = await QuestionEngine.fetch(catDef, this.roundSize, this.profile, (prog) => {
-        this.loadProgress = prog;
-        this.render();
-      });
+    const qs = await QuestionEngine.fetch(catDef, this.roundSize, this.profile, (prog) => {
+      this.loadProgress = prog;
+      this.render();
+    });
 
-      this.loading = false;
-      this.loadProgress = '';
+    this.loading = false;
+    this.loadProgress = '';
 
-      if (qs.length > 0) {
-        this.questions = qs;
-        this.view = 'quiz';
-        Audio.startBgMusic();
-      } else {
-        this.error = "Couldn't load questions. Please try again!";
-      }
-    } catch (err) {
-      console.error('[Roquiz] Quiz load error:', err);
-      this.loading = false;
-      this.loadProgress = '';
-      this.error = "Something went wrong loading questions. Please try again!";
+    if (qs.length > 0) {
+      this.questions = qs;
+      this.view = 'quiz';
+      Audio.startBgMusic();
+    } else {
+      this.error = "Couldn't load questions. Please try again!";
     }
     this.render();
   },
@@ -293,6 +302,17 @@ const App = {
     const q = this.questions[this.qi];
     const isCorrect = q.options[idx] === q.correct;
     const elapsed = (Date.now() - this.qStart) / 1000;
+    const elapsedMs = Date.now() - this.qStart;
+
+    // Track per-question data
+    this.qTimes.push(elapsedMs);
+    this.qResults.push({
+      q: q.q,
+      correct: q.correct,
+      chosen: q.options[idx],
+      time: elapsedMs,
+      isRight: isCorrect,
+    });
 
     if (isCorrect) Audio.correct();
     else Audio.wrong();
@@ -305,6 +325,7 @@ const App = {
       this.score++;
       this.rStreak++;
     } else {
+      this.wrongCount++;
       this.rStreak = 0;
     }
 
