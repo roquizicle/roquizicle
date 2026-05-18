@@ -1,21 +1,22 @@
-const CACHE_NAME = 'roquiz-v7';
+const CACHE_NAME = 'roquiz-v8';
 const ASSETS = [
   '/',
-  '/index.html',
-  '/css/themes.css',
-  '/css/app.css',
-  '/css/animations.css',
-  '/js/storage.js',
-  '/js/themes.js',
-  '/js/audio.js',
-  '/js/graded-questions.js',
-  '/js/questions.js',
-  '/js/fallback-questions.js',
-  '/js/sol-questions.js',
-  '/js/sol-standards.js',
-  '/js/game.js',
-  '/js/ui.js',
-  '/js/app.js',
+  '/roquizicle/',
+  '/roquizicle/index.html',
+  '/roquizicle/css/themes.css',
+  '/roquizicle/css/app.css',
+  '/roquizicle/css/animations.css',
+  '/roquizicle/js/storage.js',
+  '/roquizicle/js/themes.js',
+  '/roquizicle/js/audio.js',
+  '/roquizicle/js/graded-questions.js',
+  '/roquizicle/js/questions.js',
+  '/roquizicle/js/fallback-questions.js',
+  '/roquizicle/js/sol-questions.js',
+  '/roquizicle/js/sol-standards.js',
+  '/roquizicle/js/game.js',
+  '/roquizicle/js/ui.js',
+  '/roquizicle/js/app.js',
 ];
 
 self.addEventListener('install', e => {
@@ -33,7 +34,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first for API calls, cache first for assets
   if (e.request.url.includes('opentdb.com') ||
       e.request.url.includes('trivia-api.com') ||
       e.request.url.includes('anthropic.com') ||

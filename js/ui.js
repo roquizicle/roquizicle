@@ -236,20 +236,17 @@ const UI = {
     track.appendChild(this.el('div', { class: 'progress-bar', style: { width: progress + '%', background: catObj.bdr } }));
     header.appendChild(track);
 
-    // Live score row: ✓ X  streak
+    // Live ✓/✗ score row
     const scoreRow = this.el('div', { class: 'quiz-score-row' });
-    const correct_chip = this.el('span', { class: 'live-score correct-score', text: '✓ ' + score });
-    const wrong_chip = this.el('span', { class: 'live-score wrong-score', text: '✗ ' + wrongCount });
-    scoreRow.appendChild(correct_chip);
-    scoreRow.appendChild(wrong_chip);
+    scoreRow.appendChild(this.el('span', { class: 'live-score correct-score', text: '✓ ' + score }));
+    scoreRow.appendChild(this.el('span', { class: 'live-score wrong-score', text: '✗ ' + (wrongCount || 0) }));
     if (rStreak >= 2) scoreRow.appendChild(this.el('span', { class: 'chip streak', text: '🔥 x' + rStreak }));
     header.appendChild(scoreRow);
     page.appendChild(header);
 
-    // Question card
+    // Question card with Q-pill
     const qBox = this.el('div', { class: 'question-box' });
-    const qPill = this.el('span', { class: 'q-pill', text: 'Q' + (qi + 1) });
-    qBox.appendChild(qPill);
+    qBox.appendChild(this.el('span', { class: 'q-pill', text: 'Q' + (qi + 1) }));
     qBox.appendChild(this.el('div', { class: 'question-text', text: question.q }));
     page.appendChild(qBox);
 
@@ -281,7 +278,7 @@ const UI = {
     });
     page.appendChild(grid);
 
-    // Fact box (after flip) — now shows the fun fact!
+    // Fact box (after flip) — shows fun fact
     if (flipped !== null) {
       const isRight = question.options[flipped] === question.correct;
       const fact = this.el('div', { class: 'fact-box' + (isRight ? ' fact-correct' : ' fact-wrong') });
@@ -291,7 +288,6 @@ const UI = {
         ans.innerHTML = 'Answer: <strong>' + question.correct + '</strong>';
         fact.appendChild(ans);
       }
-      // Show fun fact if available
       if (question.fact) {
         fact.appendChild(this.el('div', { class: 'fact-text', text: question.fact }));
       }
@@ -319,45 +315,32 @@ const UI = {
     const xpEarned = Math.floor(score * 10 + (total - score) * 2);
     const earnedBadgeObjs = BADGES.filter(b => newBadges.includes(b.id));
 
-    // Time helpers
     const totalMs = qTimes.length > 0 ? qTimes.reduce((a, b) => a + b, 0) : 0;
     const avgSec = qTimes.length > 0 ? Math.round(totalMs / qTimes.length / 1000) : 0;
     const fastestMs = qTimes.length > 0 ? Math.min(...qTimes) : 0;
     const slowestMs = qTimes.length > 0 ? Math.max(...qTimes) : 0;
     const fmtTime = (ms) => {
       const s = Math.round(ms / 1000);
-      if (s < 60) return s + 's';
-      return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+      return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
     };
 
     const wrap = this.el('div', { class: 'results-wrap' });
 
-    // ── Circular gauge ──
+    // Circular gauge
     const gaugeColor = pc === 100 ? '#4CAF50' : pc >= 70 ? '#FF9800' : pc >= 40 ? '#2196F3' : '#F44336';
     const radius = 54, circ = +(2 * Math.PI * radius).toFixed(2);
     const dashOffset = +(circ * (1 - pc / 100)).toFixed(2);
     const gaugeWrap = this.el('div', { class: 'results-gauge-wrap' });
-    gaugeWrap.innerHTML = `
-      <svg width="140" height="140" viewBox="0 0 140 140" style="transform:rotate(-90deg);display:block">
-        <circle cx="70" cy="70" r="${radius}" fill="none" stroke="var(--border-color,#333)" stroke-width="10"/>
-        <circle cx="70" cy="70" r="${radius}" fill="none" stroke="${gaugeColor}" stroke-width="10"
-          stroke-dasharray="${circ}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"/>
-      </svg>
-      <div class="gauge-center-text">
-        <div class="gauge-pct" style="color:${gaugeColor}">${pc}%</div>
-      </div>`;
+    gaugeWrap.innerHTML = `<svg width="140" height="140" viewBox="0 0 140 140" style="transform:rotate(-90deg);display:block"><circle cx="70" cy="70" r="${radius}" fill="none" stroke="var(--border-color,#333)" stroke-width="10"/><circle cx="70" cy="70" r="${radius}" fill="none" stroke="${gaugeColor}" stroke-width="10" stroke-dasharray="${circ}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"/></svg><div class="gauge-center-text"><div class="gauge-pct" style="color:${gaugeColor}">${pc}%</div></div>`;
     wrap.appendChild(gaugeWrap);
 
     wrap.appendChild(this.el('div', { class: 'results-msg', text: msg }));
-
-    // Stars
     const starsDiv = this.el('div', { class: 'results-stars' });
     for (let i = 0; i < 3; i++) starsDiv.appendChild(this.el('span', { class: i < stars ? '' : 'dim', text: '★' }));
     wrap.appendChild(starsDiv);
-
     wrap.appendChild(this.el('div', { class: 'results-xp', text: '+' + xpEarned + ' XP earned!' }));
 
-    // ── Correct / Wrong / Skipped tiles ──
+    // Correct / Wrong / Skipped tiles
     const tilesWrap = this.el('div', { class: 'results-card' });
     const tiles = this.el('div', { class: 'results-tiles' });
     const mkTile = (val, label, cls) => {
@@ -372,7 +355,7 @@ const UI = {
     tilesWrap.appendChild(tiles);
     wrap.appendChild(tilesWrap);
 
-    // ── Time stats grid ──
+    // Time stats
     if (qTimes.length > 0) {
       const timeGrid = this.el('div', { class: 'results-time-grid' });
       const mkTime = (val, label, icon) => {
@@ -389,7 +372,7 @@ const UI = {
       wrap.appendChild(timeGrid);
     }
 
-    // ── New badges ──
+    // New badges
     if (earnedBadgeObjs.length > 0) {
       const box = this.el('div', { class: 'new-badges' });
       box.appendChild(this.el('div', { class: 'new-badges-title', text: '🏅 Badges Unlocked!' }));
@@ -405,7 +388,7 @@ const UI = {
       wrap.appendChild(box);
     }
 
-    // ── Question breakdown (collapsible) ──
+    // Question breakdown (collapsible)
     if (qResults.length > 0) {
       const section = this.el('div', { class: 'breakdown-section' });
       let open = false;
@@ -413,7 +396,6 @@ const UI = {
       toggle.appendChild(this.el('span', { text: '📋 Question Breakdown' }));
       const arrow = this.el('span', { class: 'breakdown-arrow', text: '▼' });
       toggle.appendChild(arrow);
-
       const list = this.el('div', { class: 'breakdown-list', style: { display: 'none' } });
       qResults.forEach((r, idx) => {
         const row = this.el('div', { class: 'breakdown-row ' + (r.isRight ? 'bd-correct' : 'bd-wrong') });
@@ -430,7 +412,6 @@ const UI = {
         }
         list.appendChild(row);
       });
-
       toggle.addEventListener('click', () => {
         open = !open;
         list.style.display = open ? 'block' : 'none';
@@ -441,12 +422,10 @@ const UI = {
       wrap.appendChild(section);
     }
 
-    // ── Buttons ──
     const btns = this.el('div', { class: 'results-btns' });
     btns.appendChild(this.el('button', { class: 'btn-secondary', text: '🏠 Home', onClick: onHome }));
     btns.appendChild(this.el('button', { class: 'btn-primary', text: '🔁 Try Again', onClick: onRetry }));
     wrap.appendChild(btns);
-
     this._app.appendChild(wrap);
   },
 

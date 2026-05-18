@@ -21,8 +21,8 @@ const App = {
   newBadges: [],
   qStart: 0,
   quizStartTime: 0,
-  qTimes: [],        // ms per question
-  qResults: [],      // {q, correct, chosen, time, isRight} per question
+  qTimes: [],
+  qResults: [],
   loadProgress: '',
   storeFilter: 'all',
   redeemMsg: null,
@@ -304,7 +304,6 @@ const App = {
     const elapsed = (Date.now() - this.qStart) / 1000;
     const elapsedMs = Date.now() - this.qStart;
 
-    // Track per-question data
     this.qTimes.push(elapsedMs);
     this.qResults.push({
       q: q.q,
