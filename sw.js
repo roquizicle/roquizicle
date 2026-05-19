@@ -1,50 +1,44 @@
-const CACHE_NAME = ‘roquiz-v8’;
+const CACHE_NAME = ‘roquiz-v5’;
 const ASSETS = [
-‘/roquizicle/’,
-‘/roquizicle/index.html’,
-‘/roquizicle/themes.css’,
-‘/roquizicle/app.css’,
-‘/roquizicle/animations.css’,
-‘/roquizicle/storage.js’,
-‘/roquizicle/themes.js’,
-‘/roquizicle/audio.js’,
-‘/roquizicle/graded-questions.js’,
-‘/roquizicle/dinosaurs-expansion.js’,
-‘/roquizicle/inventions-expansion.js’,
-‘/roquizicle/remaining-expansion.js’,
-‘/roquizicle/merge-expansions.js’,
-‘/roquizicle/questions.js’,
-‘/roquizicle/fallback-questions.js’,
-‘/roquizicle/sol-questions.js’,
-‘/roquizicle/sol-standards.js’,
-‘/roquizicle/game.js’,
-‘/roquizicle/ui.js’,
-‘/roquizicle/app.js’,
-‘/roquizicle/manifest.json’,
-‘/roquizicle/icon192.png’,
-‘/roquizicle/icon512.png’,
+‘/’,
+‘/index.html’,
+‘/css/themes.css’,
+‘/css/app.css’,
+‘/css/animations.css’,
+‘/js/storage.js’,
+‘/js/themes.js’,
+‘/js/audio.js’,
+‘/js/graded-questions.js’,
+‘/js/questions.js’,
+‘/js/fallback-questions.js’,
+‘/js/sol-questions.js’,
+‘/js/sol-standards.js’,
+‘/js/game.js’,
+‘/js/ui.js’,
+‘/js/app.js’,
 ];
 
 self.addEventListener(‘install’, e => {
-e.waitUntil(
-caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(() => {})
-);
+e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
 self.skipWaiting();
 });
 
 self.addEventListener(‘activate’, e => {
-// Delete ALL caches, not just old ones
 e.waitUntil(
 caches.keys().then(keys =>
-Promise.all(keys.map(k => caches.delete(k)))
+Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
 )
 );
 self.clients.claim();
 });
 
 self.addEventListener(‘fetch’, e => {
-// Network-first: always try fresh files, fall back to cache
-e.respondWith(
-fetch(e.request).catch(() => caches.match(e.request))
-);
+if (e.request.url.includes(‘opentdb.com’) ||
+e.request.url.includes(‘trivia-api.com’) ||
+e.request.url.includes(‘anthropic.com’) ||
+e.request.url.includes(‘pokeapi’)) {
+e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+} else {
+e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+}
 });
