@@ -12,7 +12,6 @@ const App = {
   qi: 0,
   flipped: null,
   score: 0,
-  wrongCount: 0,
   rStreak: 0,
   cat: null,
   roundSize: 10,
@@ -20,9 +19,7 @@ const App = {
   error: null,
   newBadges: [],
   qStart: 0,
-  quizStartTime: 0,
-  qTimes: [],
-  qResults: [],
+  questionLog: [], // tracks {q, correct, chosen, elapsed, isCorrect} per question
   loadProgress: '',
   storeFilter: 'all',
   redeemMsg: null,
@@ -119,7 +116,6 @@ const App = {
           total: this.questions.length,
           question: this.questions[this.qi],
           score: this.score,
-          wrongCount: this.wrongCount,
           rStreak: this.rStreak,
           flipped: this.flipped,
           muted: Audio.isMuted(),
@@ -133,21 +129,13 @@ const App = {
       case 'results':
         UI.renderResults({
           score: this.score,
-          wrongCount: this.wrongCount,
           total: this.questions.length,
           newBadges: this.newBadges,
-          qTimes: this.qTimes,
-          qResults: this.qResults,
-          quizStartTime: this.quizStartTime,
+          questionLog: this.questionLog,
+          totalTime: Math.round((Date.now() - this.quizStartTime) / 1000),
           cat: this.cat,
           onHome: () => this.navigate('home'),
-          onRetry: () => {
-            if (this.mode === 'school') {
-              this.startSOLQuiz(this.solSubject, this.solStrand);
-            } else {
-              this.startQuiz(this.cat);
-            }
-          },
+          onRetry: () => this.startQuiz(this.cat),
         });
         break;
 
@@ -216,17 +204,12 @@ const App = {
     this.cat = `${subject}: ${strand || 'All Standards'}`;
     this.qi = 0;
     this.score = 0;
-    this.wrongCount = 0;
     this.flipped = null;
     this.rStreak = 0;
     this.newBadges = [];
     this.qStart = Date.now();
+    this.questionLog = [];
     this.quizStartTime = Date.now();
-    this.qTimes = [];
-    this.qResults = [];
-    this.render();
-
-    let qs;
     if (strand) {
       qs = await SOLEngine.generateStrandQuiz(subject, this.profile.grade, strand, this.roundSize, (prog) => {
         this.loadProgress = prog;
@@ -266,14 +249,12 @@ const App = {
     this.cat = category;
     this.qi = 0;
     this.score = 0;
-    this.wrongCount = 0;
     this.flipped = null;
     this.rStreak = 0;
     this.newBadges = [];
     this.qStart = Date.now();
+    this.questionLog = [];
     this.quizStartTime = Date.now();
-    this.qTimes = [];
-    this.qResults = [];
     this.render();
 
     const qs = await QuestionEngine.fetch(catDef, this.roundSize, this.profile, (prog) => {
@@ -302,16 +283,6 @@ const App = {
     const q = this.questions[this.qi];
     const isCorrect = q.options[idx] === q.correct;
     const elapsed = (Date.now() - this.qStart) / 1000;
-    const elapsedMs = Date.now() - this.qStart;
-
-    this.qTimes.push(elapsedMs);
-    this.qResults.push({
-      q: q.q,
-      correct: q.correct,
-      chosen: q.options[idx],
-      time: elapsedMs,
-      isRight: isCorrect,
-    });
 
     if (isCorrect) Audio.correct();
     else Audio.wrong();
@@ -320,11 +291,19 @@ const App = {
     this.gs = result.gameState;
     Storage.saveGameState(this.gs);
 
+    // Log this question for results breakdown
+    this.questionLog.push({
+      q: q.q,
+      correct: q.correct,
+      chosen: q.options[idx],
+      isCorrect,
+      elapsed: Math.round(elapsed),
+    });
+
     if (isCorrect) {
       this.score++;
       this.rStreak++;
     } else {
-      this.wrongCount++;
       this.rStreak = 0;
     }
 
