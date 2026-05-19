@@ -1,25 +1,33 @@
-const CACHE_NAME = ‘roquiz-v5’;
+const CACHE_NAME = ‘roquiz-v9’;
 const ASSETS = [
-‘/’,
-‘/index.html’,
-‘/css/themes.css’,
-‘/css/app.css’,
-‘/css/animations.css’,
-‘/js/storage.js’,
-‘/js/themes.js’,
-‘/js/audio.js’,
-‘/js/graded-questions.js’,
-‘/js/questions.js’,
-‘/js/fallback-questions.js’,
-‘/js/sol-questions.js’,
-‘/js/sol-standards.js’,
-‘/js/game.js’,
-‘/js/ui.js’,
-‘/js/app.js’,
+‘/roquizicle/’,
+‘/roquizicle/index.html’,
+‘/roquizicle/manifest.json’,
+‘/roquizicle/merge-expansions.js’,
+‘/roquizicle/questions.js’,
+‘/roquizicle/sw.js’,
+‘/roquizicle/css/themes.css’,
+‘/roquizicle/css/app.css’,
+‘/roquizicle/css/animations.css’,
+‘/roquizicle/js/storage.js’,
+‘/roquizicle/js/themes.js’,
+‘/roquizicle/js/audio.js’,
+‘/roquizicle/js/graded-questions.js’,
+‘/roquizicle/js/graded-questions-expansion.js’,
+‘/roquizicle/js/dinosaurs-expansion.js’,
+‘/roquizicle/js/inventions-expansion.js’,
+‘/roquizicle/js/remaining-expansion.js’,
+‘/roquizicle/js/sol-expansion.js’,
+‘/roquizicle/js/fallback-questions.js’,
+‘/roquizicle/js/sol-questions.js’,
+‘/roquizicle/js/sol-standards.js’,
+‘/roquizicle/js/game.js’,
+‘/roquizicle/js/ui.js’,
+‘/roquizicle/js/app.js’,
 ];
 
 self.addEventListener(‘install’, e => {
-e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(() => {}));
 self.skipWaiting();
 });
 
