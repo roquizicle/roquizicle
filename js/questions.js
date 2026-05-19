@@ -9,8 +9,11 @@ fetchGraded(catKey, grade) {
 if (typeof GRADED_QUESTIONS === ‘undefined’) return [];
 const catBank = GRADED_QUESTIONS[catKey];
 if (!catBank) return [];
-const g = String(grade);
-const gradeKey = g + (g === ‘1’ ? ‘st’ : g === ‘2’ ? ‘nd’ : g === ‘3’ ? ‘rd’ : ‘th’) + ’ Grade’;
+let gradeKey = String(grade);
+if (!gradeKey.includes(‘Grade’)) {
+const g = gradeKey;
+gradeKey = g + (g === ‘1’ ? ‘st’ : g === ‘2’ ? ‘nd’ : g === ‘3’ ? ‘rd’ : ‘th’) + ’ Grade’;
+}
 const questions = catBank[gradeKey];
 if (!questions || !questions.length) return [];
 return this._shuffle([…questions]);
